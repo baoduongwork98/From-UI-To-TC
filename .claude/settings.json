@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/dungnb/.claude/**)",
+      "Bash(python3 -m json.tool)",
+      "Bash(npx --yes @playwright/mcp --version)",
+      "Bash(npm list *)",
+      "Bash(timeout 5 npx @playwright/mcp@latest --help)",
+      "Bash(npx @playwright/mcp@latest --help)",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_press_key",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_close",
+      "Bash(pkill -f \"mcp-chrome\")",
+      "Bash(pkill -f \"playwright\")",
+      "Bash(rm -f /Users/dungnb/Library/Caches/ms-playwright/mcp-chrome-57d4d01/Default/SingletonLock 2>/dev/null; echo \"Lock removed\")",
+      "Bash(node scripts/convert_excel/md_to_xlsx.js output_sonet/testcases_create_new_data_definition.md output_sonet/testcases_create_new_data_definition.xlsx)",
+      "Bash(mkdir -p /Users/dungnb/Desktop/create-test-case/antigravity-testing-kit/output_claude_workflow)",
+      "Bash(pkill -f \"mcp-chrome\" ; pkill -f \"playwright\" ; sleep 1 ; rm -f ~/Library/Caches/ms-playwright/mcp-chrome-*/SingletonLock ; echo \"Done\")",
+      "Bash(node scripts/convert_excel/md_to_xlsx.js output_claude_workflow/testcases_dinh_nghia_du_lieu.md output_claude_workflow/testcases_dinh_nghia_du_lieu.xlsx)",
+      "Bash(node -e ' *)"
+    ],
+    "additionalDirectories": [
+      "/Users/dungnb/.claude",
+      "/Users/dungnb/Library/Caches/ms-playwright/mcp-chrome-57d4d01/Default",
+      "/Users/dungnb/Desktop/create-test-case/antigravity-testing-kit/output_claude_workflow",
+      "/Users/dungnb/Library/Caches/ms-playwright/mcp-chrome-*"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "code-review-graph update",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
