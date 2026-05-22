@@ -227,12 +227,28 @@ Dựa trên requirements, phân loại risk:
 
 | Nhóm TC | Kỹ thuật | Description nhóm | Ví dụ |
 |---|---|---|---|
-| Happy Path | Normal flow | `Xác minh luồng chính khi nhập dữ liệu hợp lệ` | Điền đủ → submit → thành công |
-| Negative / Validation field | EP, BVA | `Kiểm tra tính bắt buộc của trường [X]` | Từng field bắt buộc = 1 TC riêng |
-| Boundary values | BVA | `Kiểm tra giới hạn ký tự trường [X]` | 1 TC per field có max length |
-| Dropdown options | Verification | `Dropdown [X] — kiểm tra đủ N options` | 1 TC per dropdown quan trọng |
+| Negative / Validation field | EP | `Kiểm tra tính bắt buộc của trường [X]` | Từng field bắt buộc = 1 TC riêng |
+| Boundary values | BVA | `Kiểm tra giới hạn ký tự trường [X]` | 1 TC per field text bắt buộc |
+| Optional field / dropdown | Verification | `Kiểm tra [field/dropdown]` | Default value, danh sách option |
+| Dropdown options count | Verification | `Dropdown [X] — kiểm tra đủ N options` | 1 TC per dropdown quan trọng |
+| Switch/Toggle | State | `Toggle [X] — bật/tắt [chức năng]` | ON→save, OFF→save |
 | Conditional UI — bật/tắt | State Transition | `[Component] — [Tên thông số]` | Merge Description cho TC ON + TC OFF + TC cascade |
+| Multi-value / multi-config | Dynamic | `Kiểm tra thêm nhiều [X]` | Thêm, xóa từng item |
+| Delete action | Negative | `Xóa một [cấu hình / thuộc tính]` | Xóa → verify không còn hiển thị |
 | Cancel / Close | Normal flow | `Kiểm tra nút [Huỷ bỏ]` | Đóng form, không lưu |
+| Happy Path | Normal flow | `Xác minh luồng chính khi nhập dữ liệu hợp lệ` | Điền đủ → submit → thành công |
+
+**Thứ tự ưu tiên nhóm TC (từ trên xuống dưới trong bảng):**
+1. Required field validation — từng trường bắt buộc
+2. Boundary values — giới hạn ký tự (nếu có max length giả định)
+3. Optional fields / default values
+4. Dropdown options count
+5. Switch/Toggle
+6. Conditional UI (từng trigger field: ON→fields xuất hiện, OFF→fields ẩn, cascade)
+7. Multi-config / multi-value (thêm nhiều, thêm cấu hình thứ N)
+8. Delete actions (xóa cấu hình, xóa thuộc tính)
+9. Cancel / Close form
+10. **Happy Path — luôn đặt cuối cùng**
 
 **Quy tắc nhóm Description (để merge ô trong Excel):**
 - Các TC kiểm tra cùng 1 tính năng (vd: Checkbox Sắp xếp ON, OFF, cascade) → **cùng Description**, chỉ ghi ở TC đầu tiên
@@ -273,19 +289,31 @@ Dựa trên requirements, phân loại risk:
 #### Pre-conditions
 - Dùng số thứ tự: `1. Điều kiện A`
 - Nếu nhiều điều kiện: `1. ...\n2. ...\n3. ...` (dùng `\n` để xuống dòng trong cell)
-- Ghi trạng thái ban đầu cụ thể: `Checkbox "X" = OFF`, `Đang ở form [Y]`
+- **Nguyên tắc ngắn gọn:** Chỉ ghi điều kiện tối thiểu cần thiết để bắt đầu test. Không ghi điều kiện hiển nhiên hoặc trùng lặp.
+  - ✅ DO: `1. Đang ở form [Thêm mới X]` — đủ để nói rằng form đang mở
+  - ❌ DON'T: `1. Đang ở trang Danh sách X\n2. Form [Thêm mới X] đang mở` — dòng 2 thừa
+- Ghi trạng thái cụ thể khi test conditional UI: `Checkbox "X" = OFF`, `Switch [Y] = ON`
+- Khi test validation của một section con (vd: config chủ động), ghi ngắn: `Đã thêm 1 cấu hình đồng bộ chủ động`
 
 #### Step
 - Đánh số: `1. Hành động A\n2. Hành động B\n3. Hành động C`
 - Dùng `\n` để xuống dòng trong cùng cell (không tách thành nhiều dòng bảng)
 - Tên nút/link: bọc `[brackets]` — vd: `Nhấn [Lưu mới]`, `Click [Thêm thuộc tính]`
 - Dùng dạng `<br>` thay cho `\n` trong bảng Markdown để script xử lý đúng
+- **Nguyên tắc generic:** Dùng `"Nhập các trường khác hợp lệ"` thay vì ghi cụ thể test data khi mục tiêu test chỉ là 1 trường — test data cụ thể làm step dài và khó maintain.
+  - ✅ DO: `1. Để trống trường [Mã]<br>2. Nhập các trường khác hợp lệ<br>3. Nhấn [Lưu mới]`
+  - ❌ DON'T: `1. Để trống trường [Mã]<br>2. Nhập [Tên]: "Test Định nghĩa"<br>3. Nhấn [Lưu mới]`
+- Chỉ ghi test data cụ thể khi test data đó là phần **cốt lõi** của TC (vd: TC Happy Path, TC boundary value)
 
 #### Expected Results
 - Có thể tham chiếu số bước: `3. Hệ thống hiển thị lỗi...`
 - Hoặc kết quả tổng thể: `Hệ thống hiển thị danh sách...`
 - Mô tả cụ thể, có thể bao gồm nội dung thông báo lỗi chính xác trong dấu `"ngoặc kép"`
 - Nếu nhiều kết quả: dùng `\n` hoặc `<br>` để xuống dòng
+- **Pattern chuẩn cho validation error:** `N. Hệ thống hiển thị lỗi tại trường dữ liệu: "Nội dung lỗi".`
+  - ✅ DO: `3. Hệ thống hiển thị lỗi tại trường dữ liệu: "Mã phải là bắt buộc".`
+  - ❌ DON'T: `3. Hệ thống hiển thị lỗi tại trường [Mã]: "Mã phải là bắt buộc". Form không được lưu.`
+  - Lý do: "tại trường dữ liệu" là pattern chuẩn nhất quán; "Form không được lưu" là kết quả hiển nhiên, không cần ghi thêm
 
 ### 2.5 Lưu file
 
@@ -324,11 +352,13 @@ Sau khi có đủ 3 file output, thực hiện review:
 - [ ] Tên field/button/section: luôn bọc trong `[brackets]`
 
 ### 4.3 Checklist Coverage
-- [ ] Mỗi trường bắt buộc có ít nhất 1 TC kiểm tra validation
-- [ ] Mỗi dropdown quan trọng có TC kiểm tra danh sách options
+- [ ] Mỗi trường bắt buộc có ít nhất 1 TC kiểm tra validation (required)
+- [ ] Mỗi trường text bắt buộc có TC kiểm tra boundary value (giới hạn ký tự)
+- [ ] Mỗi dropdown quan trọng có TC kiểm tra danh sách options (số lượng đúng)
 - [ ] Mỗi conditional UI (checkbox/switch) có TC kiểm tra ON và OFF
-- [ ] Có TC kiểm tra Happy Path đầy đủ
+- [ ] Có TC xóa cấu hình / xóa thuộc tính (delete action)
 - [ ] Có TC nút Huỷ bỏ / Đóng form
+- [ ] **Happy Path TC đặt cuối cùng trong bảng**
 
 ### 4.4 Checklist Step Quality
 - [ ] Step mô tả hành động cụ thể (không mơ hồ)
@@ -382,9 +412,17 @@ Sau khi có đủ 3 file output, thực hiện review:
 |---|---|---|---|---|---|---|
 | TC - 1 | Định nghĩa dữ liệu | Thêm | Kiểm tra tính bắt buộc của trường [Mã] | 1. Đang ở form [Thêm mới Định nghĩa dữ liệu] | 1. Để trống trường [Mã]<br>2. Nhập các trường khác hợp lệ<br>3. Nhấn [Lưu mới] | 3. Hệ thống hiển thị lỗi tại trường dữ liệu: "Mã phải là bắt buộc". |
 | TC - 2 |  |  | Kiểm tra tính bắt buộc của trường [Tên] | 1. Đang ở form [Thêm mới Định nghĩa dữ liệu] | 1. Để trống trường [Tên]<br>2. Nhập các trường khác hợp lệ<br>3. Nhấn [Lưu mới] | 3. Hệ thống hiển thị lỗi tại trường dữ liệu: "Tên phải là bắt buộc". |
-| TC - 3 |  |  | Dropdown [Method] — kiểm tra đủ 5 options | Card config đang hiển thị | 1. Mở dropdown [Method] | Dropdown hiển thị đúng 5 options: GET, POST, PUT, PATCH, DELETE |
-| TC - 4 |  |  | Cấu hình đồng bộ chủ động — Thông số sắp xếp | Checkbox "Thông số sắp xếp" = OFF | 1. Click checkbox [Thông số sắp xếp] để bật ON | Sub-section "Sắp xếp theo" xuất hiện với các field: Tham số kết nối, Tham số, Giá trị |
-| TC - 5 |  |  |  | Checkbox "Thông số sắp xếp" = ON | 1. Click checkbox [Thông số sắp xếp] để tắt OFF | Sub-section "Sắp xếp theo" và toàn bộ fields bị ẩn |
+| TC - 3 |  |  | Kiểm tra giới hạn ký tự trường [Mã] | 1. Đang ở form [Thêm mới Định nghĩa dữ liệu] | 1. Nhập chuỗi ký tự dài hơn giới hạn vào trường [Mã] | Hệ thống không cho phép nhập tiếp hoặc tự động cắt chuỗi tại ký tự giới hạn. |
+| TC - 4 |  |  | Dropdown [Method] — kiểm tra đủ 5 options | Card config đồng bộ chủ động đang hiển thị | 1. Mở dropdown [Method] | Dropdown hiển thị đúng 5 options: GET, POST, PUT, PATCH, DELETE |
+| TC - 5 |  |  | Cấu hình đồng bộ chủ động — Thông số sắp xếp | Checkbox "Thông số sắp xếp" = OFF | 1. Click checkbox [Thông số sắp xếp] để bật ON | Sub-section "Sắp xếp theo" xuất hiện với các field: Tham số kết nối, Tham số, Giá trị |
+| TC - 6 |  |  |  | Checkbox "Thông số sắp xếp" = ON | 1. Click checkbox [Thông số sắp xếp] để tắt OFF | Sub-section "Sắp xếp theo" và toàn bộ fields bị ẩn |
+| TC - 7 |  |  | Xóa một cấu hình | Đã thêm ít nhất 1 cấu hình đồng bộ chủ động | 1. Click nút xóa (×) trên card config | Card config bị xóa. Không còn hiển thị trong form. |
+| TC - 8 |  |  | Kiểm tra nút [Huỷ bỏ] | 1. Đang ở form [Thêm mới Định nghĩa dữ liệu] | 1. Nhập một số thông tin<br>2. Nhấn nút [Huỷ bỏ] | Hệ thống đóng form và quay lại màn hình danh sách. Dữ liệu vừa nhập không được lưu. |
+| TC - 9 |  |  | Xác minh luồng chính khi nhập dữ liệu hợp lệ. | 1. Nhập đầy đủ [Mã], [Tên]<br>2. Chọn [Kết nối] | 1. Nhấn nút [Lưu mới] | 1. Hệ thống tạo định nghĩa dữ liệu thành công<br>2. Hiển thị thông báo thành công |
 ```
 
-> **Lưu ý:** TC - 4 và TC - 5 cùng nhóm "Thông số sắp xếp" → Description TC - 5 để trống → script tự merge 2 ô D trong Excel.
+> **Lưu ý quan trọng:**
+> - TC - 5 và TC - 6 cùng nhóm "Thông số sắp xếp" → Description TC - 6 để trống → script tự merge 2 ô D trong Excel.
+> - **Happy Path (TC - 9) luôn đặt cuối cùng** — sau tất cả validation, dropdown, conditional UI.
+> - Pre-conditions chỉ 1 dòng khi điều kiện đơn giản — không thêm "Form đang mở" thừa.
+> - Steps dùng "Nhập các trường khác hợp lệ" thay vì ghi cụ thể test data (trừ Happy Path, Boundary).

@@ -7,10 +7,10 @@
 ## Cấu hình
 
 ```
-PROJECT_NAME=BDP
-MODULE_CODE=DATA_MASTER
-MODULE_NAME=Định nghĩa dữ liệu
-URL=https://bdp-data-gate-admin.zminiapp.me/data/masters
+PROJECT_NAME=TH
+MODULE_CODE=SEGMENT
+MODULE_NAME=Phân khúc khách hàng
+URL=https://bdp-mini-app-admin.zminiapp.me/segments
 OUTPUT_FOLDER=output_claude_workflow
 ```
 

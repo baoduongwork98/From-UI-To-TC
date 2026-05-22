@@ -20,6 +20,15 @@ try {
   process.exit(1);
 }
 
+let ExcelJS;
+try {
+  ExcelJS = require("exceljs");
+} catch {
+  console.error("❌ Thiếu thư viện exceljs. Cài đặt bằng lệnh:");
+  console.error("   npm install exceljs");
+  process.exit(1);
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function stripEmoji(text) {
@@ -136,17 +145,32 @@ function findMergeRanges(rows, dataStartRow, colIdx) {
   return ranges;
 }
 
+// ── Style helpers ─────────────────────────────────────────────────────────
+
+const THIN_BORDER = { style: "thin", color: { argb: "FF000000" } };
+const BORDER_ALL = {
+  top: THIN_BORDER,
+  left: THIN_BORDER,
+  bottom: THIN_BORDER,
+  right: THIN_BORDER,
+};
+
+function applyHeaderStyle(cell) {
+  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9D9D9" } };
+  cell.font = { bold: true, color: { argb: "FF000000" } };
+  cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+  cell.border = BORDER_ALL;
+}
+
+function applyDataStyle(cell) {
+  cell.alignment = { vertical: "top", wrapText: true };
+  cell.border = BORDER_ALL;
+}
+
 // ── Build Excel (new 7-col format) ────────────────────────────────────────
 
-function buildXlsxNew(tables, outputPath) {
-  // 2-row header
-  const headerRow1 = ["Test case ID", "Item Test", "", "Description", "Pre-conditions", "Step", "Expected Results"];
-  const headerRow2 = ["", "Main", "Sub", "", "", "", ""];
-
-  // Col widths (characters): A, B, C, D, E, F, G
-  const colWidths = [15, 22, 14, 48, 38, 58, 58];
-
-  // Collect all rows (7 cols each)
+async function buildXlsxNew(tables, outputPath) {
+  // Collect all data rows (7 cols each)
   const allRows = [];
   for (const table of tables) {
     for (const row of table.rows) {
@@ -158,39 +182,64 @@ function buildXlsxNew(tables, outputPath) {
     }
   }
 
-  const wsData = [headerRow1, headerRow2, ...allRows];
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Test Cases");
 
-  // ── Header merges ──────────────────────────────────────────────────────
-  const merges = [
-    { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, // A1:A2 — Test case ID
-    { s: { r: 0, c: 1 }, e: { r: 0, c: 2 } }, // B1:C1 — Item Test
-    { s: { r: 0, c: 3 }, e: { r: 1, c: 3 } }, // D1:D2 — Description
-    { s: { r: 0, c: 4 }, e: { r: 1, c: 4 } }, // E1:E2 — Pre-conditions
-    { s: { r: 0, c: 5 }, e: { r: 1, c: 5 } }, // F1:F2 — Step
-    { s: { r: 0, c: 6 }, e: { r: 1, c: 6 } }, // G1:G2 — Expected Results
+  // Col widths: A, B, C, D, E, F, G
+  ws.columns = [
+    { width: 15 },
+    { width: 22 },
+    { width: 14 },
+    { width: 48 },
+    { width: 38 },
+    { width: 58 },
+    { width: 58 },
   ];
 
-  // ── Data merges (row index 2 = first data row) ─────────────────────────
-  const dataStartRow = 2;
-  for (const colIdx of [1, 2, 3]) {
-    const ranges = findMergeRanges(allRows, dataStartRow, colIdx);
-    merges.push(...ranges);
+  // ── Header row 1 ──────────────────────────────────────────────────────
+  const row1 = ws.addRow(["Test case ID", "Item Test", "", "Description", "Pre-conditions", "Step", "Expected Results"]);
+  row1.height = 30;
+  for (let c = 1; c <= 7; c++) applyHeaderStyle(row1.getCell(c));
+
+  // ── Header row 2 ──────────────────────────────────────────────────────
+  const row2 = ws.addRow(["", "Main", "Sub", "", "", "", ""]);
+  row2.height = 22;
+  for (let c = 1; c <= 7; c++) applyHeaderStyle(row2.getCell(c));
+
+  // ── Header merges ─────────────────────────────────────────────────────
+  ws.mergeCells("A1:A2"); // Test case ID
+  ws.mergeCells("B1:C1"); // Item Test
+  ws.mergeCells("D1:D2"); // Description
+  ws.mergeCells("E1:E2"); // Pre-conditions
+  ws.mergeCells("F1:F2"); // Step
+  ws.mergeCells("G1:G2"); // Expected Results
+
+  // ── Data rows ─────────────────────────────────────────────────────────
+  const DATA_START_EXCEL_ROW = 3; // rows 1-2 are headers
+  for (const rowData of allRows) {
+    const row = ws.addRow(rowData);
+    for (let c = 1; c <= 7; c++) applyDataStyle(row.getCell(c));
   }
 
-  ws["!merges"] = merges;
-  ws["!cols"] = colWidths.map((w) => ({ wch: w }));
+  // ── Data merges for cols B(1), C(2), D(3) — 0-indexed ────────────────
+  // findMergeRanges returns 0-indexed absolute row positions
+  for (const colIdx of [1, 2, 3]) {
+    const ranges = findMergeRanges(allRows, DATA_START_EXCEL_ROW - 1, colIdx);
+    for (const range of ranges) {
+      const startRow = range.s.r + 1; // convert 0-indexed → 1-indexed Excel
+      const endRow = range.e.r + 1;
+      const col = String.fromCharCode(65 + range.s.c);
+      ws.mergeCells(`${col}${startRow}:${col}${endRow}`);
+    }
+  }
 
-  // Freeze first 2 header rows
-  ws["!freeze"] = { xSplit: 0, ySplit: 2, topLeftCell: "A3", state: "frozen" };
+  // ── Freeze top 2 rows ─────────────────────────────────────────────────
+  ws.views = [{ state: "frozen", xSplit: 0, ySplit: 2 }];
 
-  // AutoFilter on data start row
-  ws["!autofilter"] = { ref: `A2:G${allRows.length + 2}` };
+  // ── Auto filter on row 2 ──────────────────────────────────────────────
+  ws.autoFilter = { from: "A2", to: `G${allRows.length + 2}` };
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Test Cases");
-  XLSX.writeFile(wb, outputPath);
-
+  await wb.xlsx.writeFile(outputPath);
   return allRows.length;
 }
 
@@ -229,7 +278,7 @@ function buildXlsxLegacy(tables, outputPath) {
 
 // ── Main ───────────────────────────────────────────────────────────────────
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
 
   if (args.length < 1) {
@@ -264,7 +313,7 @@ function main() {
 
   let count;
   if (format === "new") {
-    count = buildXlsxNew(tables, outputPath);
+    count = await buildXlsxNew(tables, outputPath);
   } else {
     count = buildXlsxLegacy(tables, outputPath);
   }
@@ -272,4 +321,7 @@ function main() {
   console.log(`✅ Đã xuất ${count} test cases → ${outputPath}`);
 }
 
-main();
+main().catch((err) => {
+  console.error("❌ Lỗi:", err.message);
+  process.exit(1);
+});
