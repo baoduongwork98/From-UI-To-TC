@@ -1,10 +1,10 @@
-# TASK.md — Template cho module mới
+# TASK.md — Template for new module
 
-> Copy file này thành `TASK.md`, điền config, rồi chạy `/generate_module_testcases_full`
+> Copy this file as `TASK.md`, fill in the config, then run `/generate_module_testcases_full`
 
 ---
 
-## Cấu hình
+## Configuration
 
 ```
 PROJECT_NAME=BDP
@@ -16,38 +16,38 @@ OUTPUT_FOLDER=output/promotions
 
 ---
 
-## Bước thực hiện
+## Steps
 
-### Bước 1: Sinh Requirements từ UI
-- [ ] Navigate đến URL, inspect DOM thực tế
-- [ ] Ghi nhận đầy đủ fields, validations, conditional UI
-- [ ] Lưu: `{OUTPUT_FOLDER}/requirements_{module_slug}.md`
+### Step 1: Generate Requirements from UI
+- [ ] Navigate to URL, inspect real DOM
+- [ ] Record all fields, validations, conditional UI
+- [ ] Save: `{OUTPUT_FOLDER}/requirements_{module_slug}.md`
 
-### Bước 2: Sinh Test Cases (RBT)
-- [ ] Đọc requirements đã sinh
-- [ ] Sinh TC theo phân loại High/Medium/Low risk
+### Step 2: Generate Test Cases (RBT)
+- [ ] Read generated requirements
+- [ ] Generate TCs classified as High/Medium/Low risk
 - [ ] TC ID format: `{PROJECT_NAME}_{MODULE_CODE}_TC_001`
-- [ ] Lưu: `{OUTPUT_FOLDER}/testcases_{module_slug}.md`
+- [ ] Save: `{OUTPUT_FOLDER}/testcases_{module_slug}.md`
 
-### Bước 3: Export Excel
-- [ ] Chạy: `node scripts/convert_excel/md_to_xlsx.js {input.md} {output.xlsx}`
-- [ ] Verify đủ số lượng TC trong log output
+### Step 3: Export Excel
+- [ ] Run: `node scripts/convert_excel/md_to_xlsx.js {input.md} {output.xlsx}`
+- [ ] Verify TC count in log output
 
-### Bước 4: Review (Tùy chọn)
-- [ ] TC ID đúng format, không trùng
-- [ ] Coverage đủ cho mọi trường bắt buộc
-- [ ] Test data cụ thể, không placeholder
+### Step 4: Review (Optional)
+- [ ] TC ID correct format, no duplicates
+- [ ] Coverage for all required fields
+- [ ] Specific test data, no placeholders
 
 ---
 
-## Ví dụ đã dùng
+## Used Examples
 
-| Trường | Ví dụ |
+| Field | Example |
 |---|---|
 | PROJECT_NAME | BDP |
 | MODULE_CODE | DATA_DEF |
 | MODULE_NAME | Create New Data Definition |
 | URL | https://bdp-data-gate-admin.zminiapp.me/data/masters |
 | OUTPUT_FOLDER | output_sonet |
-| TC ID mẫu | BDP_DATA_DEF_TC_001 |
-| Số TC | 40 |
+| TC ID sample | BDP_DATA_DEF_TC_001 |
+| TC count | 40 |

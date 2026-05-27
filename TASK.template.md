@@ -1,53 +1,53 @@
-# TASK.md — Template cho module mới
+# TASK.md — Template for new module
 
-> Copy file này thành `TASK.md`, điền config, rồi chạy `/generate_module_testcases_full`
-
----
-
-## Cấu hình
-
-```
-PROJECT_NAME=<Tên dự án viết HOA, vd: BDP, CRM, ECOM>
-MODULE_CODE=<Mã module viết HOA không dấu, vd: DATA_DEF, USER_MGT, ORDER>
-MODULE_NAME=<Tên module tiếng Việt, vd: Create New Data Definition>
-URL=<URL đầy đủ của module cần kiểm thử>
-OUTPUT_FOLDER=<output_sonet | output_gemini_pro | tên thư mục tùy chọn>
-```
+> Copy this file as `TASK.md`, fill in the config, then run `/generate_module_testcases_full`
 
 ---
 
-## Bước thực hiện
+## Configuration
 
-### Bước 1: Sinh Requirements từ UI
-- [ ] Navigate đến URL, inspect DOM thực tế
-- [ ] Ghi nhận đầy đủ fields, validations, conditional UI
-- [ ] Lưu: `{OUTPUT_FOLDER}/requirements_{module_slug}.md`
+```
+PROJECT_NAME=<Project name in UPPERCASE, e.g: BDP, CRM, ECOM>
+MODULE_CODE=<Module code in UPPERCASE without accents, e.g: DATA_DEF, USER_MGT, ORDER>
+MODULE_NAME=<Module name, e.g: Create New Data Definition>
+URL=<Full URL of the module to test>
+OUTPUT_FOLDER=<output_sonet | output_gemini_pro | custom folder name>
+```
 
-### Bước 2: Sinh Test Cases (RBT)
-- [ ] Đọc requirements đã sinh
-- [ ] Sinh TC theo phân loại High/Medium/Low risk
+---
+
+## Steps
+
+### Step 1: Generate Requirements from UI
+- [ ] Navigate to URL, inspect real DOM
+- [ ] Record all fields, validations, conditional UI
+- [ ] Save: `{OUTPUT_FOLDER}/requirements_{module_slug}.md`
+
+### Step 2: Generate Test Cases (RBT)
+- [ ] Read generated requirements
+- [ ] Generate TCs classified as High/Medium/Low risk
 - [ ] TC ID format: `{PROJECT_NAME}_{MODULE_CODE}_TC_001`
-- [ ] Lưu: `{OUTPUT_FOLDER}/testcases_{module_slug}.md`
+- [ ] Save: `{OUTPUT_FOLDER}/testcases_{module_slug}.md`
 
-### Bước 3: Export Excel
-- [ ] Chạy: `node scripts/convert_excel/md_to_xlsx.js {input.md} {output.xlsx}`
-- [ ] Verify đủ số lượng TC trong log output
+### Step 3: Export Excel
+- [ ] Run: `node scripts/convert_excel/md_to_xlsx.js {input.md} {output.xlsx}`
+- [ ] Verify TC count in log output
 
-### Bước 4: Review (Tùy chọn)
-- [ ] TC ID đúng format, không trùng
-- [ ] Coverage đủ cho mọi trường bắt buộc
-- [ ] Test data cụ thể, không placeholder
+### Step 4: Review (Optional)
+- [ ] TC ID correct format, no duplicates
+- [ ] Coverage for all required fields
+- [ ] Specific test data, no placeholders
 
 ---
 
-## Ví dụ đã dùng
+## Used Examples
 
-| Trường | Ví dụ |
+| Field | Example |
 |---|---|
 | PROJECT_NAME | BDP |
 | MODULE_CODE | DATA_DEF |
 | MODULE_NAME | Create New Data Definition |
 | URL | https://bdp-data-gate-admin.zminiapp.me/data/masters |
 | OUTPUT_FOLDER | output_sonet |
-| TC ID mẫu | BDP_DATA_DEF_TC_001 |
-| Số TC | 40 |
+| TC ID sample | BDP_DATA_DEF_TC_001 |
+| TC count | 40 |

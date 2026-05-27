@@ -1,5 +1,5 @@
 ---
-description: Workflow đầu-cuối sinh Requirements + Test Cases + Excel cho một module từ URL — dựa trên thực tế kiểm thử module BDP Data Definition.
+description: End-to-end workflow for generating Requirements + Test Cases + Excel for a module from its URL — based on real testing of the BDP Data Definition module.
 skills:
   - requirements_analyzer
   - rbt_manual_testing
@@ -8,253 +8,253 @@ skills:
 
 # Workflow: Generate Full Module Test Cases (End-to-End)
 
-> **Mục đích:** Sinh toàn bộ tài liệu kiểm thử (Requirements → Test Cases → Excel) cho một module từ URL thực tế.
-> Workflow này được đúc kết từ thực tế kiểm thử module BDP Create New Data Definition.
+> **Purpose:** Generate complete test documentation (Requirements → Test Cases → Excel) for a module from a live URL.
+> This workflow is distilled from real testing experience on the BDP Create New Data Definition module.
 
 ---
 
-## Cấu hình đầu vào (TASK Config)
+## Input Configuration (TASK Config)
 
-Trước khi bắt đầu, đọc file `TASK.md` (nếu có) hoặc yêu cầu user cung cấp:
+Before starting, read `TASK.md` (if available) or ask the user to provide:
 
 ```
-MODULE_NAME=<Tên module tiếng Việt, vd: Thêm mới Định nghĩa dữ liệu>
-ITEM_TEST_MAIN=<Nhóm chính, vd: Định nghĩa dữ liệu>
-ITEM_TEST_SUB=<Nhóm con, vd: Thêm>
-URL=<URL module cần kiểm thử>
-OUTPUT_FOLDER=<Thư mục output, vd: output_sonet>
-START_NUMBER=<Số bắt đầu TC ID, mặc định: 1>
+MODULE_NAME=<Module name, e.g: Add New Data Definition>
+ITEM_TEST_MAIN=<Main group, e.g: Data Definition>
+ITEM_TEST_SUB=<Sub group, e.g: Add>
+URL=<Module URL to test>
+OUTPUT_FOLDER=<Output folder, e.g: output_sonet>
+START_NUMBER=<Starting TC ID number, default: 1>
 ```
 
-**Tên file output** (tự suy ra từ MODULE_NAME, viết thường, dấu cách → dấu gạch dưới):
+**Output file names** (derived from MODULE_NAME, lowercase, spaces → underscores):
 - Requirements: `{OUTPUT_FOLDER}/requirements_{module_slug}.md`
 - Test Cases MD: `{OUTPUT_FOLDER}/testcases_{module_slug}.md`
 - Test Cases XLSX: `{OUTPUT_FOLDER}/testcases_{module_slug}.xlsx`
 
-**TC ID format bắt buộc:** `TC - {số thứ tự}` bắt đầu từ `START_NUMBER` — vd: `TC - 1`, `TC - 2`, `TC - 25`
+**Required TC ID format:** `TC - {sequence number}` starting from `START_NUMBER` — e.g.: `TC - 1`, `TC - 2`, `TC - 25`
 
 ---
 
-## Bước 0: Chuẩn bị Browser
+## Step 0: Browser Setup
 
-### 0.1 Kiểm tra và giải phóng browser lock (nếu cần)
+### 0.1 Check and release browser lock (if needed)
 
-Nếu gặp lỗi `Browser is already in use`:
+If `Browser is already in use` error occurs:
 ```bash
-# Kill browser process cũ
+# Kill old browser process
 pkill -f "mcp-chrome" ; pkill -f "playwright"
-# Xóa singleton lock
+# Remove singleton lock
 rm -f ~/Library/Caches/ms-playwright/mcp-chrome-*/SingletonLock
 ```
-Sau đó thử navigate lại.
+Then retry navigation.
 
-### 0.2 Khởi động browser đúng cách
+### 0.2 Start browser in the correct order
 
-Thực hiện **theo thứ tự bắt buộc:**
+Execute in **mandatory sequence:**
 ```
 navigate(URL) → resize(1920×1080) → wait_for_load → snapshot → screenshot
 ```
 
-> **Lưu ý:** Luôn resize về 1920×1080 ngay sau navigate. Không tự đoán locator trước khi có snapshot.
+> **Note:** Always resize to 1920×1080 immediately after navigate. Never guess locators before taking a snapshot.
 
 ---
 
-## Bước 1: Thu thập Requirements từ UI
+## Step 1: Collect Requirements from UI
 
-### 1.1 Inspect trang danh sách (List Page)
+### 1.1 Inspect the list page
 
-- Snapshot trang danh sách → ghi nhận tiêu đề, nút hành động, filter, pagination
-- Screenshot lưu: `{OUTPUT_FOLDER}/screenshot_list_page.png`
+- Snapshot the list page → record title, action buttons, filters, pagination
+- Save screenshot: `{OUTPUT_FOLDER}/screenshot_list_page.png`
 
-### 1.2 Mở form tạo mới
+### 1.2 Open the create form
 
-- Click nút "Thêm mới" / "Tạo mới" / button tương ứng
-- Nếu click bị chặn bởi pointer-events, dùng JavaScript:
+- Click "Add" / "Create" / equivalent button
+- If click is blocked by pointer-events, use JavaScript:
   ```javascript
-  // Thay vì click trực tiếp, dùng evaluate:
+  // Instead of direct click, use evaluate:
   element.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-  // Hoặc:
+  // Or:
   document.querySelector('selector').click()
   ```
-- Snapshot form → screenshot lưu: `{OUTPUT_FOLDER}/screenshot_01_form_open.png`
+- Snapshot form → save screenshot: `{OUTPUT_FOLDER}/screenshot_01_form_open.png`
 
-### 1.3 Kiểm tra từng section của form
+### 1.3 Inspect each section of the form
 
-Với **mỗi section / tab / accordion** trong form:
+For **each section / tab / accordion** in the form:
 
-1. **Snapshot DOM** — ghi nhận đầy đủ các field hiển thị ở trạng thái mặc định
-2. **Xác định trường bắt buộc** — kiểm tra asterisk (`*`) trong DOM thực tế, KHÔNG giả định
+1. **Snapshot DOM** — record all fields visible in the default state
+2. **Identify required fields** — check for asterisk (`*`) in real DOM, DO NOT assume
    ```javascript
-   // Tìm label có asterisk
+   // Find labels with asterisk
    document.querySelectorAll('.ant-form-item-required, [class*="required"]')
    ```
-3. **Với Dropdown/Select** — mở bằng JS mousedown/click qua `.ant-select-selector`, đọc options, rồi **đóng bằng JS blur** (KHÔNG dùng `keyboard.press('Escape')` vì sẽ đóng cả modal/drawer):
+3. **For Dropdown/Select** — open via JS mousedown/click on `.ant-select-selector`, read options, then **close via JS blur** (DO NOT use `keyboard.press('Escape')` as it will close the entire modal/drawer):
    ```javascript
-   // Mở dropdown
+   // Open dropdown
    const selector = formItem.querySelector('.ant-select-selector');
    selector.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
    selector.click();
 
-   // Đọc options (sau khi đợi 1s)
+   // Read options (after waiting 1s)
    const opts = document.querySelectorAll('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option');
 
-   // Đóng dropdown — dùng blur hoặc click tiêu đề form, KHÔNG dùng Escape
+   // Close dropdown — use blur or click form title, DO NOT use Escape
    document.querySelector('.ant-form-item-label')?.click();
-   // Hoặc:
+   // Or:
    selector.dispatchEvent(new MouseEvent('blur', { bubbles: true }));
    ```
-4. **Scroll virtual list** để không bỏ sót options:
+4. **Scroll virtual list** to avoid missing options:
    ```javascript
-   // Với rc-virtual-list (Ant Design):
+   // For rc-virtual-list (Ant Design):
    const holder = document.querySelector('.rc-virtual-list-holder')
    if (holder) holder.scrollTop = holder.scrollHeight
    ```
-5. **Screenshot** mỗi section quan trọng
+5. **Screenshot** each important section
 
-### 1.4 Khám phá Conditional UI — BẮT BUỘC thực hiện đầy đủ
+### 1.4 Explore Conditional UI — MUST be fully executed
 
-> **Nguyên tắc cốt lõi:** Mỗi field có thể điều kiện đều phải được thao tác với **tất cả giá trị có thể** để phát hiện field ẩn. Không được bỏ qua bước này.
+> **Core principle:** Each potentially conditional field must be interacted with using **all possible values** to discover hidden fields. Never skip this step.
 
-#### A. Nhận diện các field điều kiện (Trigger Fields)
+#### A. Identify Trigger Fields
 
-Các loại field thường gây ra conditional UI:
+Field types that commonly cause conditional UI:
 
-| Loại field | Cách phát hiện |
+| Field Type | How to Detect |
 |---|---|
-| Checkbox / Toggle / Switch | Trạng thái OFF (mặc định) → ON |
-| Dropdown / Select | Mỗi option có thể render UI khác nhau |
-| Radio button | Mỗi lựa chọn có thể mở/đóng fields |
-| Tab / Accordion | Nội dung mỗi tab có thể khác nhau |
-| Numeric input | Giá trị > 0 hoặc > N có thể mở thêm fields |
+| Checkbox / Toggle / Switch | OFF (default) → ON |
+| Dropdown / Select | Each option may render different UI |
+| Radio button | Each selection may show/hide fields |
+| Tab / Accordion | Each tab may have different content |
+| Numeric input | Value > 0 or > N may reveal more fields |
 
-#### B. Quy trình khám phá từng Trigger Field
+#### B. Exploration Process for Each Trigger Field
 
-Với **mỗi field điều kiện**, thực hiện **lần lượt từng giá trị**:
+For **each trigger field**, execute **each value sequentially**:
 
 ```
-1. Ghi nhận trạng thái hiện tại (snapshot)
-2. Thao tác giá trị mới (click checkbox / chọn option dropdown)
-3. Snapshot lại → so sánh với trạng thái trước
-4. Ghi nhận: fields mới xuất hiện / fields bị ẩn / fields thay đổi thuộc tính
-5. Screenshot (đặt tên theo quy tắc: screenshot_{field}_{value}.png)
-6. Nếu field mới xuất hiện → lặp lại B cho field đó (kiểm tra cascading)
-7. Trả field về trạng thái mặc định trước khi sang field tiếp theo
+1. Record current state (snapshot)
+2. Interact with new value (click checkbox / select dropdown option)
+3. Snapshot again → compare with previous state
+4. Record: new fields appeared / fields hidden / fields with changed attributes
+5. Screenshot (named by convention: screenshot_{field}_{value}.png)
+6. If new field appears → repeat B for that field (check cascading)
+7. Return field to default state before moving to next field
 ```
 
-#### C. Ví dụ thực tế (BDP Data Definition)
+#### C. Real Example (BDP Data Definition)
 
 ```
 Dropdown "Loại dữ liệu":
-  → Chọn "String"   → xuất hiện field "Điều kiện: Bằng, Khác, Chứa, Không chứa..."
-  → Chọn "Number"   → xuất hiện field "Điều kiện: =, ≠, >, >=, <, <=..."
-  → Chọn "Boolean"  → xuất hiện field "Điều kiện: True, False"
-  → Chọn "DateTime" → xuất hiện field "Điều kiện: Trước, Sau, Trong khoảng..."
+  → Select "String"   → field "Điều kiện: Bằng, Khác, Chứa, Không chứa..." appears
+  → Select "Number"   → field "Điều kiện: =, ≠, >, >=, <, <=..." appears
+  → Select "Boolean"  → field "Điều kiện: True, False" appears
+  → Select "DateTime" → field "Điều kiện: Trước, Sau, Trong khoảng..." appears
 
 Checkbox "Thông số sắp xếp":
-  → OFF (mặc định) → không có field nào thêm
-  → ON             → xuất hiện: "Tên trường sắp xếp", "Chiều sắp xếp" (checkbox con)
-    → "Chiều sắp xếp" ON → xuất hiện: "Giá trị mặc định" dropdown (ASC/DESC)
+  → OFF (default) → no additional fields
+  → ON            → "Tên trường sắp xếp", "Chiều sắp xếp" (sub-checkbox) appear
+    → "Chiều sắp xếp" ON → "Giá trị mặc định" dropdown (ASC/DESC) appears
 ```
 
-#### D. Ghi chép Conditional UI Map
+#### D. Document the Conditional UI Map
 
-Sau khi khám phá xong, lập **bảng mapping** trong requirements:
+After exploration, create a **mapping table** in requirements:
 
 ```markdown
 ### Conditional UI Map
 
-| Trigger Field | Giá trị | Fields xuất hiện | Fields bị ẩn | Ghi chú |
+| Trigger Field | Value | Fields Shown | Fields Hidden | Notes |
 |---|---|---|---|---|
-| Checkbox "Sắp xếp" | ON  | Tên trường, Chiều sắp xếp | — | — |
-| Checkbox "Sắp xếp" | OFF | — | Tên trường, Chiều sắp xếp | Trạng thái mặc định |
-| Dropdown "Loại" | String | Điều kiện (text ops) | — | 4 operators |
-| Dropdown "Loại" | Number | Điều kiện (number ops) | — | 6 operators |
+| Checkbox "Sắp xếp" | ON  | Field Name, Sort Direction | — | — |
+| Checkbox "Sắp xếp" | OFF | — | Field Name, Sort Direction | Default state |
+| Dropdown "Loại" | String | Condition (text ops) | — | 4 operators |
+| Dropdown "Loại" | Number | Condition (number ops) | — | 6 operators |
 ```
 
-#### E. Test Cases bắt buộc từ Conditional UI
+#### E. Required Test Cases from Conditional UI
 
-Với **mỗi dòng** trong Conditional UI Map, phải có ít nhất:
-- 1 TC: Trigger → verify field mới xuất hiện + có thể nhập liệu
-- 1 TC: Untrigger → verify field bị ẩn + không được submit giá trị của nó
-- 1 TC: Điền field ẩn → trigger ON → verify data được lưu đúng
+For **each row** in the Conditional UI Map, there must be at least:
+- 1 TC: Trigger → verify new field appears + can be filled
+- 1 TC: Untrigger → verify field is hidden + value not submitted
+- 1 TC: Fill hidden field → trigger ON → verify data saved correctly
 
-### 1.5 Kiểm tra validation
+### 1.5 Check validation
 
-- Submit form rỗng → snapshot messages lỗi → ghi nhận **nội dung chính xác** của từng message
-- Test từng trường với dữ liệu invalid (quá dài, ký tự đặc biệt, sai format)
+- Submit empty form → snapshot error messages → record **exact content** of each message
+- Test each field with invalid data (too long, special characters, wrong format)
 - Screenshot: `{OUTPUT_FOLDER}/screenshot_04_validation.png`
 
-### 1.6 Viết file Requirements
+### 1.6 Write Requirements file
 
-Lưu vào `{OUTPUT_FOLDER}/requirements_{module_slug}.md` với cấu trúc:
+Save to `{OUTPUT_FOLDER}/requirements_{module_slug}.md` with structure:
 
 ```markdown
 # Requirements: {MODULE_NAME}
 
-## 1. Tổng quan
-[Mô tả mục đích module]
+## 1. Overview
+[Describe module purpose]
 
-## 2. Yêu cầu chức năng
-| Mã | Mô tả |
+## 2. Functional Requirements
+| Code | Description |
 |---|---|
 | US-01 | ... |
 
-## 3. Đặc tả trường dữ liệu
+## 3. Field Specifications
 
-### 3.1 {Tên Section 1}
-| Trường | Loại | Bắt buộc | Giá trị/Ràng buộc | Ghi chú |
+### 3.1 {Section Name 1}
+| Field | Type | Required | Values/Constraints | Notes |
 |---|---|---|---|---|
 
-## 4. Luồng xử lý & Validation
-[Mô tả luồng Happy Path + Validation rules]
+## 4. Processing Flows & Validation
+[Describe Happy Path flow + Validation rules]
 
-## 5. Câu hỏi làm rõ (Ambiguities)
-[Các điểm chưa rõ cần confirm với PO/BA]
+## 5. Clarification Questions (Ambiguities)
+[Unclear points that need confirmation with PO/BA]
 ```
 
 ---
 
-## Bước 2: Sinh Test Cases
+## Step 2: Generate Test Cases
 
-### 2.1 Phân tích risk và scope
+### 2.1 Risk analysis and scope
 
-Dựa trên requirements, phân loại risk:
-- **High:** Validation bắt buộc, submit thành công/thất bại, luồng chính
+Based on requirements, classify risks:
+- **High:** Required field validation, successful/failed submit, main flows
 - **Medium:** Conditional UI, dropdown options, boundary values
-- **Low:** UI cosmetic, optional fields, edge cases hiếm gặp
+- **Low:** UI cosmetic, optional fields, rare edge cases
 
-### 2.2 Xác định các nhóm test case và cách nhóm Description
+### 2.2 Define TC groups and Description grouping
 
-| Nhóm TC | Kỹ thuật | Description nhóm | Ví dụ |
+| TC Group | Technique | Description Pattern | Example |
 |---|---|---|---|
-| Negative / Validation field | EP | `Kiểm tra tính bắt buộc của trường [X]` | Từng field bắt buộc = 1 TC riêng |
-| Boundary values | BVA | `Kiểm tra giới hạn ký tự trường [X]` | 1 TC per field text bắt buộc |
-| Optional field / dropdown | Verification | `Kiểm tra [field/dropdown]` | Default value, danh sách option |
-| Dropdown options count | Verification | `Dropdown [X] — kiểm tra đủ N options` | 1 TC per dropdown quan trọng |
+| Negative / Field Validation | EP | `Kiểm tra tính bắt buộc của trường [X]` | One TC per required field |
+| Boundary values | BVA | `Kiểm tra giới hạn ký tự trường [X]` | 1 TC per required text field |
+| Optional field / dropdown | Verification | `Kiểm tra [field/dropdown]` | Default value, option list |
+| Dropdown options count | Verification | `Dropdown [X] — kiểm tra đủ N options` | 1 TC per important dropdown |
 | Switch/Toggle | State | `Toggle [X] — bật/tắt [chức năng]` | ON→save, OFF→save |
-| Conditional UI — bật/tắt | State Transition | `[Component] — [Tên thông số]` | Merge Description cho TC ON + TC OFF + TC cascade |
-| Multi-value / multi-config | Dynamic | `Kiểm tra thêm nhiều [X]` | Thêm, xóa từng item |
-| Delete action | Negative | `Xóa một [cấu hình / thuộc tính]` | Xóa → verify không còn hiển thị |
-| Cancel / Close | Normal flow | `Kiểm tra nút [Huỷ bỏ]` | Đóng form, không lưu |
-| Happy Path | Normal flow | `Xác minh luồng chính khi nhập dữ liệu hợp lệ` | Điền đủ → submit → thành công |
+| Conditional UI — toggle | State Transition | `[Component] — [Parameter Name]` | Merge Description for ON + OFF + cascade TCs |
+| Multi-value / multi-config | Dynamic | `Kiểm tra thêm nhiều [X]` | Add, remove each item |
+| Delete action | Negative | `Xóa một [cấu hình / thuộc tính]` | Delete → verify no longer shown |
+| Cancel / Close | Normal flow | `Kiểm tra nút [Huỷ bỏ]` | Close form, no save |
+| Happy Path | Normal flow | `Xác minh luồng chính khi nhập dữ liệu hợp lệ` | Fill all → submit → success |
 
-**Thứ tự ưu tiên nhóm TC (từ trên xuống dưới trong bảng):**
-1. Required field validation — từng trường bắt buộc
-2. Boundary values — giới hạn ký tự (nếu có max length giả định)
+**TC group priority order (top to bottom in table):**
+1. Required field validation — one TC per required field
+2. Boundary values — character limits (if max length assumed)
 3. Optional fields / default values
 4. Dropdown options count
 5. Switch/Toggle
-6. Conditional UI (từng trigger field: ON→fields xuất hiện, OFF→fields ẩn, cascade)
-7. Multi-config / multi-value (thêm nhiều, thêm cấu hình thứ N)
-8. Delete actions (xóa cấu hình, xóa thuộc tính)
+6. Conditional UI (each trigger field: ON→fields appear, OFF→fields hidden, cascade)
+7. Multi-config / multi-value (add multiple, add Nth config)
+8. Delete actions (delete config, delete attribute)
 9. Cancel / Close form
-10. **Happy Path — luôn đặt cuối cùng**
+10. **Happy Path — always placed last**
 
-**Quy tắc nhóm Description (để merge ô trong Excel):**
-- Các TC kiểm tra cùng 1 tính năng (vd: Checkbox Sắp xếp ON, OFF, cascade) → **cùng Description**, chỉ ghi ở TC đầu tiên
-- Các TC kiểm tra field/dropdown khác nhau → **Description riêng**
+**Description grouping rules (for cell merging in Excel):**
+- TCs testing the same feature (e.g.: Checkbox Sort ON, OFF, cascade) → **same Description**, only written in the first TC
+- TCs testing different fields/dropdowns → **separate Description**
 
-### 2.3 Format bảng output bắt buộc
+### 2.3 Required output table format
 
 ```markdown
 | Test case ID | Item Test Main | Item Test Sub | Description | Pre-conditions | Step | Expected Results |
@@ -262,68 +262,68 @@ Dựa trên requirements, phân loại risk:
 | TC - 1 | Định nghĩa dữ liệu | Thêm | Kiểm tra tính bắt buộc của trường [Mã] | 1. Đang ở form [Thêm mới Định nghĩa dữ liệu] | 1. Để trống trường [Mã]<br>2. Nhập các trường khác hợp lệ<br>3. Nhấn [Lưu mới] | 3. Hệ thống hiển thị lỗi tại trường dữ liệu: "Mã phải là bắt buộc". |
 ```
 
-**Thứ tự cột không được thay đổi. 7 cột, không thêm không bớt.**
+**Column order must not change. Exactly 7 columns — no additions, no removals.**
 
-### 2.4 Quy tắc viết test case
+### 2.4 Test case writing rules
 
 #### TC ID
-- Format: `TC - {số thứ tự}` bắt đầu từ `START_NUMBER` (mặc định 1)
-- Ví dụ: `TC - 1`, `TC - 2`, ..., `TC - 25`, `TC - 26`
+- Format: `TC - {sequence number}` starting from `START_NUMBER` (default 1)
+- Example: `TC - 1`, `TC - 2`, ..., `TC - 25`, `TC - 26`
 
 #### Item Test Main / Sub
-- **Main:** Nhóm tính năng cấp cao — vd: `Định nghĩa dữ liệu`, `Khách hàng`
-- **Sub:** Hành động cụ thể — vd: `Thêm`, `Sửa`, `Xóa`, `Xem`
-- **Quy tắc merge:** Nếu nhiều TC liên tiếp cùng Main/Sub, **chỉ ghi ở TC đầu tiên**, các TC tiếp theo để **trống** → script sẽ tự merge ô trong Excel
+- **Main:** High-level feature group — e.g.: `Định nghĩa dữ liệu`, `Khách hàng`
+- **Sub:** Specific action — e.g.: `Thêm`, `Sửa`, `Xóa`, `Xem`
+- **Merge rule:** If consecutive TCs share the same Main/Sub, **only write in the first TC**, subsequent TCs leave **blank** → script will auto-merge cells in Excel
 
 #### Description
-- Mô tả ngắn gọn mục tiêu kiểm tra (≤ 80 ký tự)
-- Patterns chuẩn:
-  - `Kiểm tra tính bắt buộc của trường [TênTrường]`
-  - `Kiểm tra giới hạn ký tự trường [TênTrường]`
-  - `Dropdown [TênDropdown] — kiểm tra đủ N options`
-  - `Toggle [TênToggle] — bật/tắt [chức năng]`
-  - `[ComponentName] — [hành động kiểm tra]`
-- Tên trường, nút, section UI → luôn bọc trong `[brackets]`
-- **Quy tắc merge:** Nếu nhiều TC liên tiếp cùng nhóm/chức năng (vd: TC sắp xếp ON/OFF/cascade đều thuộc "Thông số sắp xếp"), **chỉ ghi ở TC đầu tiên**, các TC tiếp theo để **trống**
+- Brief description of test objective (≤ 80 characters)
+- Standard patterns (in Vietnamese, matching app language):
+  - `Kiểm tra tính bắt buộc của trường [FieldName]`
+  - `Kiểm tra giới hạn ký tự trường [FieldName]`
+  - `Dropdown [DropdownName] — kiểm tra đủ N options`
+  - `Toggle [ToggleName] — bật/tắt [feature]`
+  - `[ComponentName] — [test action]`
+- Field names, buttons, UI sections → always wrap in `[brackets]`
+- **Merge rule:** If consecutive TCs belong to the same group/feature (e.g.: Sort ON/OFF/cascade all belong to "Sort Parameters"), **only write in the first TC**, subsequent TCs leave **blank**
 
 #### Pre-conditions
-- Dùng số thứ tự: `1. Điều kiện A`
-- Nếu nhiều điều kiện: `1. ...\n2. ...\n3. ...` (dùng `\n` để xuống dòng trong cell)
-- **Nguyên tắc ngắn gọn:** Chỉ ghi điều kiện tối thiểu cần thiết để bắt đầu test. Không ghi điều kiện hiển nhiên hoặc trùng lặp.
-  - ✅ DO: `1. Đang ở form [Thêm mới X]` — đủ để nói rằng form đang mở
-  - ❌ DON'T: `1. Đang ở trang Danh sách X\n2. Form [Thêm mới X] đang mở` — dòng 2 thừa
-- Ghi trạng thái cụ thể khi test conditional UI: `Checkbox "X" = OFF`, `Switch [Y] = ON`
-- Khi test validation của một section con (vd: config chủ động), ghi ngắn: `Đã thêm 1 cấu hình đồng bộ chủ động`
+- Use sequence numbers: `1. Condition A`
+- If multiple conditions: `1. ...\n2. ...\n3. ...` (use `\n` for line breaks within cell)
+- **Brevity principle:** Only record the minimum conditions needed to start the test. Do not record obvious or duplicate conditions.
+  - ✅ DO: `1. Đang ở form [Thêm mới X]` — sufficient to state form is open
+  - ❌ DON'T: `1. Đang ở trang Danh sách X\n2. Form [Thêm mới X] đang mở` — line 2 is redundant
+- Record specific state when testing conditional UI: `Checkbox "X" = OFF`, `Switch [Y] = ON`
+- When testing validation of a sub-section (e.g.: active sync config), write briefly: `Đã thêm 1 cấu hình đồng bộ chủ động`
 
 #### Step
-- Đánh số: `1. Hành động A\n2. Hành động B\n3. Hành động C`
-- Dùng `\n` để xuống dòng trong cùng cell (không tách thành nhiều dòng bảng)
-- Tên nút/link: bọc `[brackets]` — vd: `Nhấn [Lưu mới]`, `Click [Thêm thuộc tính]`
-- Dùng dạng `<br>` thay cho `\n` trong bảng Markdown để script xử lý đúng
-- **Nguyên tắc generic:** Dùng `"Nhập các trường khác hợp lệ"` thay vì ghi cụ thể test data khi mục tiêu test chỉ là 1 trường — test data cụ thể làm step dài và khó maintain.
+- Numbered: `1. Action A\n2. Action B\n3. Action C`
+- Use `\n` for line breaks within the same cell (do not split into multiple table rows)
+- Button/link names: wrap in `[brackets]` — e.g.: `Nhấn [Lưu mới]`, `Click [Thêm thuộc tính]`
+- Use `<br>` instead of `\n` in Markdown tables for proper script handling
+- **Generic principle:** Use `"Nhập các trường khác hợp lệ"` instead of specific test data when the test targets only 1 field — specific test data makes steps long and hard to maintain.
   - ✅ DO: `1. Để trống trường [Mã]<br>2. Nhập các trường khác hợp lệ<br>3. Nhấn [Lưu mới]`
   - ❌ DON'T: `1. Để trống trường [Mã]<br>2. Nhập [Tên]: "Test Định nghĩa"<br>3. Nhấn [Lưu mới]`
-- Chỉ ghi test data cụ thể khi test data đó là phần **cốt lõi** của TC (vd: TC Happy Path, TC boundary value)
+- Only write specific test data when it is the **core** of the TC (e.g.: Happy Path TC, boundary value TC)
 
 #### Expected Results
-- Có thể tham chiếu số bước: `3. Hệ thống hiển thị lỗi...`
-- Hoặc kết quả tổng thể: `Hệ thống hiển thị danh sách...`
-- Mô tả cụ thể, có thể bao gồm nội dung thông báo lỗi chính xác trong dấu `"ngoặc kép"`
-- Nếu nhiều kết quả: dùng `\n` hoặc `<br>` để xuống dòng
-- **Pattern chuẩn cho validation error:** `N. Hệ thống hiển thị lỗi tại trường dữ liệu: "Nội dung lỗi".`
+- Can reference step numbers: `3. Hệ thống hiển thị lỗi...`
+- Or overall result: `Hệ thống hiển thị danh sách...`
+- Specific description, can include exact error message content in `"double quotes"`
+- If multiple results: use `\n` or `<br>` for line breaks
+- **Standard validation error pattern:** `N. Hệ thống hiển thị lỗi tại trường dữ liệu: "Error message".`
   - ✅ DO: `3. Hệ thống hiển thị lỗi tại trường dữ liệu: "Mã phải là bắt buộc".`
   - ❌ DON'T: `3. Hệ thống hiển thị lỗi tại trường [Mã]: "Mã phải là bắt buộc". Form không được lưu.`
-  - Lý do: "tại trường dữ liệu" là pattern chuẩn nhất quán; "Form không được lưu" là kết quả hiển nhiên, không cần ghi thêm
+  - Reason: "tại trường dữ liệu" is the consistent standard pattern; "Form không được lưu" is obvious and need not be stated
 
-### 2.5 Lưu file
+### 2.5 Save file
 
-Lưu vào `{OUTPUT_FOLDER}/testcases_{module_slug}.md`
+Save to `{OUTPUT_FOLDER}/testcases_{module_slug}.md`
 
 ---
 
-## Bước 3: Export Excel
+## Step 3: Export Excel
 
-Chạy lệnh sau khi đã có file MD hoàn chỉnh:
+Run after the complete MD file is ready:
 
 ```bash
 node scripts/convert_excel/md_to_xlsx.js \
@@ -331,70 +331,70 @@ node scripts/convert_excel/md_to_xlsx.js \
   {OUTPUT_FOLDER}/testcases_{module_slug}.xlsx
 ```
 
-Kiểm tra output log: `Tìm thấy N bảng, tổng M test cases → Đã xuất M test cases`
+Check output log: `Found N tables, total M test cases → Exported M test cases`
 
 ---
 
-## Bước 4 (Tùy chọn): Review & QA
+## Step 4 (Optional): Review & QA
 
-Sau khi có đủ 3 file output, thực hiện review:
+After all 3 output files are ready, perform review:
 
-### 4.1 Checklist TC ID
-- [ ] Format đúng: `TC - N` (số thứ tự liên tiếp, bắt đầu từ START_NUMBER)
-- [ ] Không trùng số thứ tự
-- [ ] Đánh số liên tiếp (không nhảy)
+### 4.1 TC ID Checklist
+- [ ] Correct format: `TC - N` (sequential, starting from START_NUMBER)
+- [ ] No duplicate sequence numbers
+- [ ] Sequential numbering (no gaps)
 
-### 4.2 Checklist Format bảng MD
-- [ ] Đúng 7 cột: `Test case ID | Item Test Main | Item Test Sub | Description | Pre-conditions | Step | Expected Results`
-- [ ] Main/Sub: chỉ ghi ở dòng đầu tiên, các dòng sau để trống
-- [ ] Description: chỉ ghi ở TC đầu của nhóm, các TC trong nhóm để trống
-- [ ] Step và Pre-conditions: dùng `<br>` để xuống dòng (không tách nhiều dòng bảng)
-- [ ] Tên field/button/section: luôn bọc trong `[brackets]`
+### 4.2 Markdown Table Format Checklist
+- [ ] Exactly 7 columns: `Test case ID | Item Test Main | Item Test Sub | Description | Pre-conditions | Step | Expected Results`
+- [ ] Main/Sub: only written in the first row, subsequent rows left blank
+- [ ] Description: only written in the first TC of a group, subsequent TCs in group left blank
+- [ ] Step and Pre-conditions: use `<br>` for line breaks (do not split into multiple table rows)
+- [ ] Field/button/section names: always wrapped in `[brackets]`
 
-### 4.3 Checklist Coverage
-- [ ] Mỗi trường bắt buộc có ít nhất 1 TC kiểm tra validation (required)
-- [ ] Mỗi trường text bắt buộc có TC kiểm tra boundary value (giới hạn ký tự)
-- [ ] Mỗi dropdown quan trọng có TC kiểm tra danh sách options (số lượng đúng)
-- [ ] Mỗi conditional UI (checkbox/switch) có TC kiểm tra ON và OFF
-- [ ] Có TC xóa cấu hình / xóa thuộc tính (delete action)
-- [ ] Có TC nút Huỷ bỏ / Đóng form
-- [ ] **Happy Path TC đặt cuối cùng trong bảng**
+### 4.3 Coverage Checklist
+- [ ] Each required field has at least 1 TC for validation (required)
+- [ ] Each required text field has a TC for boundary value (character limit)
+- [ ] Each important dropdown has a TC for option list (correct count)
+- [ ] Each conditional UI (checkbox/switch) has TCs for both ON and OFF states
+- [ ] TC for deleting config / attribute (delete action) is present
+- [ ] TC for Cancel / Close form button is present
+- [ ] **Happy Path TC is placed last in the table**
 
-### 4.4 Checklist Step Quality
-- [ ] Step mô tả hành động cụ thể (không mơ hồ)
-- [ ] Expected Result nêu rõ thông báo/trạng thái cụ thể
-- [ ] Pre-condition ghi trạng thái ban đầu chính xác (vd: `Checkbox "X" = OFF`)
+### 4.4 Step Quality Checklist
+- [ ] Steps describe specific actions (not vague)
+- [ ] Expected Results clearly state messages/states
+- [ ] Pre-condition records accurate initial state (e.g.: `Checkbox "X" = OFF`)
 
 ---
 
-## Xử lý sự cố thường gặp
+## Troubleshooting
 
-| Vấn đề | Giải pháp |
+| Issue | Solution |
 |---|---|
-| Browser lock: `Browser is already in use` | `pkill -f "mcp-chrome"` + xóa `SingletonLock` |
-| Click bị chặn (pointer-events) | Dùng `evaluate` với `element.click()` hoặc `dispatchEvent` |
-| Dropdown thiếu options (virtual scroll) | Scroll `rc-virtual-list-holder` về `scrollHeight` rồi query lại |
-| Ref stale sau interaction | Snapshot lại trước khi dùng ref mới |
-| Nhiều element cùng text/selector | Dùng JS `querySelectorAll` + filter theo index hoặc parent |
-| Form không trigger validation | Submit bằng nút chính thức, không dùng keyboard shortcut |
-| `Escape` đóng mất modal/drawer | **KHÔNG BAO GIỜ** dùng `keyboard.press('Escape')` khi đang trong modal — thay bằng JS blur hoặc click ra vùng tiêu đề form |
-| Dropdown không đóng sau khi lấy options | Dùng `selector.dispatchEvent(new MouseEvent('blur', { bubbles: true }))` hoặc click label của một field khác |
+| Browser lock: `Browser is already in use` | `pkill -f "mcp-chrome"` + remove `SingletonLock` |
+| Click blocked (pointer-events) | Use `evaluate` with `element.click()` or `dispatchEvent` |
+| Dropdown missing options (virtual scroll) | Scroll `rc-virtual-list-holder` to `scrollHeight` then re-query |
+| Stale ref after interaction | Re-snapshot before using new ref |
+| Multiple elements with same text/selector | Use JS `querySelectorAll` + filter by index or parent |
+| Form does not trigger validation | Submit using the official button, not keyboard shortcut |
+| `Escape` closes modal/drawer | **NEVER** use `keyboard.press('Escape')` inside modal — use JS blur or click form title area |
+| Dropdown doesn't close after reading options | Use `selector.dispatchEvent(new MouseEvent('blur', { bubbles: true }))` or click another field's label |
 
 ---
 
-## Checklist hoàn thành
+## Completion Checklist
 
-- [ ] `requirements_{module_slug}.md` — đầy đủ sections, validated từ DOM thực tế
-- [ ] `testcases_{module_slug}.md` — đúng format, đủ coverage, TC ID đúng
-- [ ] `testcases_{module_slug}.xlsx` — export thành công, đủ số lượng TC
-- [ ] Screenshots đã lưu cho reference
-- [ ] Không còn câu hỏi làm rõ quan trọng nào bị bỏ ngỏ
+- [ ] `requirements_{module_slug}.md` — complete sections, validated from real DOM
+- [ ] `testcases_{module_slug}.md` — correct format, sufficient coverage, correct TC IDs
+- [ ] `testcases_{module_slug}.xlsx` — exported successfully, correct TC count
+- [ ] Screenshots saved for reference
+- [ ] No important clarification questions left unanswered
 
 ---
 
-## Ví dụ thực tế
+## Real Example
 
-| Config | Giá trị |
+| Config | Value |
 |---|---|
 | MODULE_NAME | Thêm mới Định nghĩa dữ liệu |
 | ITEM_TEST_MAIN | Định nghĩa dữ liệu |
@@ -402,10 +402,10 @@ Sau khi có đủ 3 file output, thực hiện review:
 | URL | https://bdp-data-gate-admin.zminiapp.me/data/masters |
 | OUTPUT_FOLDER | output_sonet |
 | START_NUMBER | 1 |
-| TC ID mẫu | TC - 1, TC - 2, ..., TC - 30 |
-| Files đã sinh | requirements_them_moi_dinh_nghia_du_lieu.md, testcases_them_moi_dinh_nghia_du_lieu.md, .xlsx |
+| TC ID sample | TC - 1, TC - 2, ..., TC - 30 |
+| Generated files | requirements_them_moi_dinh_nghia_du_lieu.md, testcases_them_moi_dinh_nghia_du_lieu.md, .xlsx |
 
-### Ví dụ bảng MD mẫu
+### Sample Markdown Table
 
 ```markdown
 | Test case ID | Item Test Main | Item Test Sub | Description | Pre-conditions | Step | Expected Results |
@@ -421,8 +421,8 @@ Sau khi có đủ 3 file output, thực hiện review:
 | TC - 9 |  |  | Xác minh luồng chính khi nhập dữ liệu hợp lệ. | 1. Nhập đầy đủ [Mã], [Tên]<br>2. Chọn [Kết nối] | 1. Nhấn nút [Lưu mới] | 1. Hệ thống tạo định nghĩa dữ liệu thành công<br>2. Hiển thị thông báo thành công |
 ```
 
-> **Lưu ý quan trọng:**
-> - TC - 5 và TC - 6 cùng nhóm "Thông số sắp xếp" → Description TC - 6 để trống → script tự merge 2 ô D trong Excel.
-> - **Happy Path (TC - 9) luôn đặt cuối cùng** — sau tất cả validation, dropdown, conditional UI.
-> - Pre-conditions chỉ 1 dòng khi điều kiện đơn giản — không thêm "Form đang mở" thừa.
-> - Steps dùng "Nhập các trường khác hợp lệ" thay vì ghi cụ thể test data (trừ Happy Path, Boundary).
+> **Important notes:**
+> - TC - 5 and TC - 6 belong to the same "Sort Parameters" group → TC - 6 Description is blank → script auto-merges 2 D cells in Excel.
+> - **Happy Path (TC - 9) is always placed last** — after all validation, dropdowns, conditional UI.
+> - Pre-conditions are 1 line when condition is simple — do not add redundant "Form is open".
+> - Steps use "Nhập các trường khác hợp lệ" instead of specific test data (except Happy Path, Boundary).

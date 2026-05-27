@@ -1,101 +1,101 @@
 # Testing Kit
 
-Công cụ sinh tài liệu kiểm thử tự động từ URL thực tế — **không cần viết tay**.
+Automated test documentation generator from live web UIs — **no manual writing needed**.
 
-Chỉ cần cung cấp URL module, AI sẽ tự:
-1. Inspect DOM → sinh Requirements
-2. Phân tích risk → sinh Test Cases (RBT)
-3. Export file Excel hoàn chỉnh
+Just provide the module URL, and the AI will automatically:
+1. Inspect DOM → generate Requirements
+2. Analyze risk → generate Test Cases (RBT)
+3. Export a complete Excel file
 
 ---
 
-## Cách dùng nhanh
+## Quick Start
 
-**Bước 1** — Điền config vào `TASK.md`:
+**Step 1** — Fill in config in `TASK.md`:
 
 ```
 PROJECT_NAME=BDP
 MODULE_CODE=DATA_DEF
-MODULE_NAME=Định nghĩa dữ liệu
+MODULE_NAME=Create New Data Definition
 URL=https://your-app.com/module
 OUTPUT_FOLDER=output_sonet
 ```
 
-**Bước 2** — Chạy workflow trong Claude Code:
+**Step 2** — Run the workflow in Claude Code:
 
 ```
 /generate_module_testcases_full
 ```
 
-**Kết quả** trong `OUTPUT_FOLDER/`:
-- `requirements_{module}.md` — đặc tả chức năng, danh sách fields, conditional UI
-- `testcases_{module}.md` — bảng test cases 7 cột
-- `testcases_{module}.xlsx` — file Excel sẵn dùng
+**Output** in `OUTPUT_FOLDER/`:
+- `requirements_{module}.md` — functional specs, field list, conditional UI
+- `testcases_{module}.md` — 7-column test case table
+- `testcases_{module}.xlsx` — ready-to-use Excel file
 
 ---
 
-## Output mẫu
+## Sample Output
 
-Xem kết quả thực tế tại:
-- [output_sonet/](output_sonet/) — module BDP Create New Data Definition (~40 TCs)
-- [output_claude_workflow/](output_claude_workflow/) — module BDP Định nghĩa dữ liệu
+See real results at:
+- [output_sonet/](output_sonet/) — BDP Create New Data Definition module (~40 TCs)
+- [output_claude_workflow/](output_claude_workflow/) — BDP Data Definition module
 
 ---
 
-## Workflow chi tiết
+## Detailed Workflow
 
-Workflow thực hiện 4 bước:
+The workflow runs in 4 steps:
 
-### Bước 1 — Thu thập Requirements từ UI
-- Navigate đến URL, resize viewport 1920×1080
-- Inspect DOM từng section/tab của form
-- Khám phá **Conditional UI** — thao tác tất cả giá trị của mỗi trigger field (checkbox, dropdown, radio) để phát hiện field ẩn
-- Ghi nhận validation messages chính xác từ DOM
+### Step 1 — Collect Requirements from UI
+- Navigate to URL, resize viewport to 1920×1080
+- Inspect DOM for each section/tab of the form
+- Explore **Conditional UI** — interact with all values of each trigger field (checkbox, dropdown, radio) to discover hidden fields
+- Record exact validation messages from DOM
 
-### Bước 2 — Sinh Test Cases
-Phân loại theo risk:
-- **High** — validation bắt buộc, happy path, submit thành công/thất bại
+### Step 2 — Generate Test Cases
+Classified by risk:
+- **High** — required field validation, happy path, successful/failed submit
 - **Medium** — conditional UI, dropdown options, boundary values
 - **Low** — edge cases, optional fields
 
-Format bảng output chuẩn (7 cột):
+Standard output table format (7 columns):
 
 | Test case ID | Item Test Main | Item Test Sub | Description | Pre-conditions | Step | Expected Results |
 |---|---|---|---|---|---|---|
 | TC - 1 | Định nghĩa dữ liệu | Thêm | Kiểm tra tính bắt buộc của trường [Mã] | 1. Đang ở form [Thêm mới] | 1. Để trống trường [Mã]`<br>`2. Nhấn [Lưu mới] | 2. Hiển thị lỗi: "Mã phải là bắt buộc" |
 
-### Bước 3 — Export Excel
+### Step 3 — Export Excel
 
 ```bash
 node scripts/convert_excel/md_to_xlsx.js output_sonet/testcases_module.md output_sonet/testcases_module.xlsx
 ```
 
-### Bước 4 — Review (tùy chọn)
-Checklist TC ID, format bảng, coverage, step quality.
+### Step 4 — Review (Optional)
+Checklist: TC ID, table format, coverage, step quality.
 
 ---
 
-## Cấu trúc dự án
+## Project Structure
 
 ```
 ├── .agent/
-│   ├── workflows/generate_module_testcases_full.md   # Logic workflow
+│   ├── workflows/generate_module_testcases_full.md   # Workflow logic
 │   └── skills/
-│       ├── requirements_analyzer/   # Phân tích requirements từ UI
-│       ├── rbt_manual_testing/      # Sinh test cases theo RBT
-│       └── ui_debug_agent/          # Inspect DOM, đọc locators
+│       ├── requirements_analyzer/   # Analyze requirements from UI
+│       ├── rbt_manual_testing/      # Generate test cases using RBT
+│       └── ui_debug_agent/          # Inspect DOM, read locators
 ├── scripts/convert_excel/           # md_to_xlsx.js — export Excel
-├── TASK.md                          # Input config (chỉnh trước khi chạy)
-├── TASK.template.md                 # Template TASK.md cho module mới
-└── Tc_sample.xlsx                   # File Excel mẫu tham khảo
+├── TASK.md                          # Input config (edit before running)
+├── TASK.template.md                 # Template TASK.md for new modules
+└── Tc_sample.xlsx                   # Sample Excel reference file
 ```
 
 ---
 
-## Yêu cầu
+## Requirements
 
-- [Claude Code](https://claude.ai/code) với MCP Playwright
-- Node.js (cho script export Excel)
+- [Claude Code](https://claude.ai/code) with MCP Playwright
+- Node.js (for Excel export script)
 
 ```bash
 cd scripts/convert_excel && npm install
@@ -103,7 +103,7 @@ cd scripts/convert_excel && npm install
 
 ---
 
-## Demo apps thực hành
+## Demo Apps (Practice)
 
 | App | URL | Login |
 |---|---|---|

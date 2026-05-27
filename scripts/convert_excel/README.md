@@ -1,38 +1,38 @@
 # 📊 MD to XLSX Converter
 
-Convert file Markdown Test Cases sang Excel (`.xlsx`) có format đẹp, sẵn sàng chia sẻ.
+Convert Markdown Test Cases to formatted Excel (`.xlsx`) files, ready to share.
 
-## Yêu cầu
+## Requirements
 
 - **Node.js** ≥ 16
 
-## Cài đặt
+## Installation
 
 ```bash
 cd scripts/convert_excel
 npm install
 ```
 
-## Cách dùng
+## Usage
 
 ```bash
-# Từ thư mục gốc project
+# From project root
 node scripts/convert_excel/md_to_xlsx.js <input.md> [output.xlsx]
 ```
 
-### Ví dụ
+### Examples
 
 ```bash
-# Output tự động cùng thư mục, cùng tên (đuôi .xlsx)
+# Auto output in same directory, same name (with .xlsx extension)
 node scripts/convert_excel/md_to_xlsx.js requirements/crm/test_cases_crm_login.md
 
-# Chỉ định output path
+# Specify output path
 node scripts/convert_excel/md_to_xlsx.js requirements/crm/test_cases_crm_login.md output/crm_login.xlsx
 ```
 
-## Đầu vào (Input)
+## Input
 
-File Markdown chứa bảng test cases theo format:
+Markdown file containing test case tables in the following format:
 
 ```markdown
 | TC ID | Module | Risk Level | Test Title | Pre-Condition | Test Steps | Expected Result | Priority | Test Data |
@@ -40,16 +40,16 @@ File Markdown chứa bảng test cases theo format:
 | TC_001 | ... | 🔴 High | ... | ... | Step 1<br>Step 2 | ... | Critical | ... |
 ```
 
-> **Lưu ý:** Script tự động nhận diện tất cả các bảng có cột `TC ID` trong file.
+> **Note:** The script automatically detects all tables with a `TC ID` column in the file.
 
-## Đầu ra (Output)
+## Output
 
-File `.xlsx` với các tính năng:
+`.xlsx` file with the following features:
 
-| Tính năng | Mô tả |
+| Feature | Description |
 |-----------|-------|
-| **Column widths** | Tự động set độ rộng phù hợp cho từng cột |
-| **Freeze panes** | Cố định dòng header khi cuộn |
-| **AutoFilter** | Bộ lọc tự động trên header |
-| **Line breaks** | Các bước test (`<br>`) chuyển thành xuống dòng trong cell |
-| **Clean text** | Tự động xóa emoji, backtick markdown |
+| **Column widths** | Auto-set appropriate width for each column |
+| **Freeze panes** | Freeze header row when scrolling |
+| **AutoFilter** | Auto-filter on header row |
+| **Line breaks** | Test steps (`<br>`) converted to line breaks within cells |
+| **Clean text** | Automatically removes emojis, markdown backticks |

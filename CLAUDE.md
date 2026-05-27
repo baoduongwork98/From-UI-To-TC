@@ -1,71 +1,71 @@
 # CLAUDE.md — Testing Kit
 
-> Giao tiếp, giải thích, báo cáo: **Tiếng Việt**. Code & commit message: **Tiếng Anh**.
+> Communication, explanations, reports: **Vietnamese**. Code & commit messages: **English**.
 
 ---
 
-## Bảo mật (ĐỌC TRƯỚC — ƯU TIÊN CAO NHẤT)
+## Security (READ FIRST — HIGHEST PRIORITY)
 
-- **KHÔNG BAO GIỜ** đọc file `.env` bằng bất kỳ tool nào (`Read`, `Bash cat`, `grep`, …) để lấy credentials.
-- Credentials thật chỉ tồn tại trong `.env` — không được expose qua log, chat, hay artifact.
-- File `.env.example` được phép đọc (không chứa credentials thật).
-- Trước khi chạy lệnh destructive (`rm -rf`, `git reset --hard`, `git push --force`): **hỏi user xác nhận**.
+- **NEVER** read the `.env` file with any tool (`Read`, `Bash cat`, `grep`, …) to extract credentials.
+- Real credentials only exist in `.env` — never expose via logs, chat, or artifacts.
+- `.env.example` is safe to read (contains no real credentials).
+- Before running destructive commands (`rm -rf`, `git reset --hard`, `git push --force`): **ask user for confirmation**.
 
 ---
 
-## Cấu Trúc Dự Án
+## Project Structure
 
 ```
 antigravity-testing-kit/
 ├── .agent/
 │   ├── skills/
-│   │   ├── requirements_analyzer/   # Phân tích requirements từ website/tài liệu
-│   │   ├── rbt_manual_testing/      # Sinh manual test cases (QUICK / FULL RBT)
-│   │   └── ui_debug_agent/          # Inspect DOM, thu thập locators thực tế
+│   │   ├── requirements_analyzer/   # Analyze requirements from websites/documents
+│   │   ├── rbt_manual_testing/      # Generate manual test cases (QUICK / FULL RBT)
+│   │   └── ui_debug_agent/          # Inspect DOM, collect real locators
 │   └── workflows/
-│       └── generate_module_testcases_full.md   # Workflow chính
+│       └── generate_module_testcases_full.md   # Main workflow
 ├── scripts/
 │   └── convert_excel/               # Markdown → Excel (node md_to_xlsx.js)
-├── output_sonet/                    # Kết quả mẫu từ Claude Sonnet
-├── output_claude/                   # Kết quả mẫu từ Claude
-├── output_claude_workflow/          # Kết quả mẫu từ workflow
-├── TASK.md                          # Input config cho workflow
-├── TASK.template.md                 # Template TASK.md
-└── Tc_sample.xlsx                   # File Excel mẫu tham khảo
+├── output_sonet/                    # Sample output from Claude Sonnet
+├── output_claude/                   # Sample output from Claude
+├── output_claude_workflow/          # Sample output from workflow
+├── TASK.md                          # Input config for workflow
+├── TASK.template.md                 # Template for TASK.md
+└── Tc_sample.xlsx                   # Sample Excel reference file
 ```
 
 ---
 
-## Workflow Chính
+## Main Workflow
 
-| Command | Mô tả |
+| Command | Description |
 |---|---|
-| `/generate_module_testcases_full` | Đầu-cuối từ URL → Requirements → Test Cases → Excel (đọc TASK.md) |
+| `/generate_module_testcases_full` | End-to-end from URL → Requirements → Test Cases → Excel (reads TASK.md) |
 
 ---
 
 ## Browser & UI Debug
 
-- Viewport bắt buộc: **1920×1080** cho mọi UI debug
-- Thứ tự debug bắt buộc:
+- Required viewport: **1920×1080** for all UI debug sessions
+- Required debug order:
   ```
-  navigate → resize(1920×1080) → wait_for_load → snapshot → interact → screenshot(khi fail)
+  navigate → resize(1920×1080) → wait_for_load → snapshot → interact → screenshot(on failure)
   ```
-- **KHÔNG đoán locator** — phải inspect DOM thực tế trước khi viết code
+- **NEVER guess locators** — inspect real DOM before writing code
 
-### Thứ Tự Ưu Tiên Locator
+### Locator Priority Order
 
 ```
 getByRole / getByLabel / getByPlaceholder
   → getByText / getByTestId
     → data-testid / id / name
       → CSS Selector
-        → XPath (cuối cùng)
+        → XPath (last resort)
 ```
 
 ---
 
-## Công Cụ
+## Tools
 
 ### Markdown → Excel
 
@@ -73,7 +73,7 @@ getByRole / getByLabel / getByPlaceholder
 node scripts/convert_excel/md_to_xlsx.js <input.md> [output.xlsx]
 ```
 
-### Demo Apps (Thực Hành)
+### Demo Apps (Practice)
 
 | App | URL | Login |
 |---|---|---|
@@ -84,8 +84,8 @@ node scripts/convert_excel/md_to_xlsx.js <input.md> [output.xlsx]
 
 ## Anti-Patterns (FORBIDDEN)
 
-| Cấm | Thay thế đúng |
+| Forbidden | Correct Alternative |
 |---|---|
-| Đọc `.env` để lấy credentials | Dùng biến môi trường, hỏi user |
-| Đoán locator không inspect DOM | Inspect DOM thực tế trước khi code |
-| Chạy lệnh destructive không hỏi | Hỏi user xác nhận trước |
+| Reading `.env` to get credentials | Use environment variables, ask user |
+| Guessing locators without inspecting DOM | Inspect real DOM before writing code |
+| Running destructive commands without asking | Always ask user for confirmation first |
