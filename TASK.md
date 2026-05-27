@@ -7,11 +7,11 @@
 ## Cấu hình
 
 ```
-PROJECT_NAME=TH
-MODULE_CODE=SEGMENT
-MODULE_NAME=Phân khúc khách hàng
-URL=https://bdp-mini-app-admin.zminiapp.me/segments
-OUTPUT_FOLDER=output_claude_workflow
+PROJECT_NAME=BDP
+MODULE_CODE=PROMOTION
+MODULE_NAME=Chương trình tích luỹ
+URL=https://bdp-mini-app-admin.zminiapp.me/promotions
+OUTPUT_FOLDER=output/promotions
 ```
 
 ---
